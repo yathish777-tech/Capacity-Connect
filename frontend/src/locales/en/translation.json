@@ -1,0 +1,33 @@
+{
+  "app_name": "CAPACITY CONNECT",
+  "tagline": "Capacity building and knowledge sharing for the India Meteorological Department",
+  "nav": {
+    "dashboard": "Dashboard",
+    "courses": "Courses",
+    "logout": "Log out"
+  },
+  "auth": {
+    "login": "Log in",
+    "signup": "Sign up",
+    "email": "Email",
+    "password": "Password",
+    "full_name": "Full name",
+    "employee_id": "Employee ID",
+    "role": "I am a",
+    "trainer": "Trainer",
+    "trainee": "Trainee",
+    "pending_notice": "Your account is pending Admin approval. You'll be notified once it's reviewed.",
+    "have_account": "Already have an account?",
+    "no_account": "Don't have an account?"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "approve": "Approve",
+    "reject": "Reject",
+    "submit": "Submit",
+    "status": "Status",
+    "actions": "Actions"
+  }
+}
