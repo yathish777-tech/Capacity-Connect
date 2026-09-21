@@ -29,3 +29,4 @@ class TokenResponse(BaseModel):
     role: str
     status: str
     full_name: str
+    rejection_reason: Optional[str] = None

@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class QuestionIn(BaseModel):
@@ -10,7 +10,8 @@ class QuestionIn(BaseModel):
     option_b: str
     option_c: str
     option_d: str
-    correct_option: Literal["a", "b", "c", "d"]
+    correct_option: Optional[Literal["a", "b", "c", "d"]] = None
+    correct_options: Optional[List[Literal["a", "b", "c", "d"]]] = None
     marks: int = 1
 
 
@@ -35,6 +36,7 @@ class QuestionOutTrainee(BaseModel):
     option_c: str
     option_d: str
     marks: int
+    is_multi_answer: bool = False
 
 
 class QuestionnaireOutTrainee(BaseModel):
@@ -61,6 +63,8 @@ class QuestionOutTrainer(BaseModel):
     option_c: str
     option_d: str
     correct_option: str
+    correct_options: List[str] = Field(default_factory=list, validation_alias="correct_option_list")
+    is_multi_answer: bool = False
     marks: int
 
 
@@ -88,8 +92,11 @@ class QuestionnaireSummary(BaseModel):
     question_count: int = 0
 
 
+AnswerValue = Union[Literal["a", "b", "c", "d"], List[Literal["a", "b", "c", "d"]]]
+
+
 class AttemptSubmit(BaseModel):
-    answers: Dict[int, Literal["a", "b", "c", "d"]]
+    answers: Dict[int, AnswerValue]
 
 
 class ViolationLog(BaseModel):
@@ -122,3 +129,25 @@ class AttemptWithViolations(AttemptOut):
 class AttemptStartResponse(BaseModel):
     attempt: AttemptOut
     questionnaire: QuestionnaireOutTrainee
+
+class AttemptReview(AttemptOut):
+    answers: Optional[Dict[str, Union[str, List[str]]]] = None
+    questions: List[QuestionOutTrainer]
+
+class ReAttemptRequestCreate(BaseModel):
+    reason: str
+
+class ReAttemptRequestOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    attempt_id: int
+    trainee_id: int
+    questionnaire_id: int
+    reason: Optional[str] = None
+    status: str
+    requested_at: datetime
+    reviewed_at: Optional[datetime] = None
+
+class ReAttemptRequestReview(BaseModel):
+    action: Literal["approve", "reject"]

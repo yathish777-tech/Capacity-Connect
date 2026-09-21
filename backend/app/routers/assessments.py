@@ -25,8 +25,14 @@ from app.schemas.assessment import (
     QuestionnaireSummary,
     ViolationLog,
     ViolationLogResult,
+    AttemptReview,
+    ReAttemptRequestCreate,
+    ReAttemptRequestOut,
+    ReAttemptRequestReview,
 )
 from app.services.integrity_checker import record_violation
+from app.models.reattempt_request import ReAttemptRequest
+from app.models.enums import ReAttemptStatus
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
 
@@ -57,6 +63,10 @@ def create_questionnaire(
     db.flush()
 
     for q in payload.questions:
+        correct_options = q.correct_options or ([q.correct_option] if q.correct_option else [])
+        correct_options = sorted(set(correct_options))
+        if not correct_options:
+            raise HTTPException(status_code=400, detail="Each question needs at least one correct option")
         db.add(
             Question(
                 questionnaire_id=questionnaire.id,
@@ -65,7 +75,8 @@ def create_questionnaire(
                 option_b=q.option_b,
                 option_c=q.option_c,
                 option_d=q.option_d,
-                correct_option=q.correct_option,
+                correct_option=correct_options[0],
+                correct_options=",".join(correct_options),
                 marks=q.marks,
             )
         )
@@ -202,12 +213,28 @@ def log_violation(
     return ViolationLogResult(**result)
 
 
-def _grade_attempt(db: Session, attempt: AssessmentAttempt, answers: dict[int, str]) -> None:
+def _normalize_answer(value) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return sorted(set(value))
+    return [value]
+
+
+def _grade_attempt(db: Session, attempt: AssessmentAttempt, answers: dict[int, str | list[str]]) -> None:
     questions = db.query(Question).filter(Question.questionnaire_id == attempt.questionnaire_id).all()
     total_marks = sum(q.marks for q in questions)
-    score = sum(q.marks for q in questions if answers.get(q.id) == q.correct_option.value)
+    score = sum(
+        q.marks
+        for q in questions
+        if _normalize_answer(answers.get(q.id)) == sorted(q.correct_option_list)
+    )
 
-    attempt.answers = {str(k): v for k, v in answers.items()}
+    question_by_id = {q.id: q for q in questions}
+    attempt.answers = {
+        str(k): _normalize_answer(v) if question_by_id.get(k) and question_by_id[k].is_multi_answer else (_normalize_answer(v)[0] if _normalize_answer(v) else "")
+        for k, v in answers.items()
+    }
     attempt.score = score
     attempt.total_marks = total_marks
     if attempt.status == AttemptStatus.in_progress:
@@ -252,3 +279,93 @@ def get_attempt(attempt_id: int, db: Session = Depends(get_db), trainee: User = 
     if not attempt:
         raise HTTPException(status_code=404, detail="Attempt not found")
     return attempt
+
+
+@router.get("/attempts/{attempt_id}/review", response_model=AttemptReview)
+def get_attempt_review(attempt_id: int, db: Session = Depends(get_db), trainee: User = Depends(require_trainee)):
+    attempt = db.query(AssessmentAttempt).filter(
+        AssessmentAttempt.id == attempt_id, AssessmentAttempt.trainee_id == trainee.id
+    ).first()
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Attempt not found")
+    if attempt.status == AttemptStatus.in_progress:
+        raise HTTPException(status_code=400, detail="Cannot review an attempt that is still in progress")
+
+    questions = db.query(Question).filter(Question.questionnaire_id == attempt.questionnaire_id).all()
+    
+    return AttemptReview(
+        id=attempt.id,
+        questionnaire_id=attempt.questionnaire_id,
+        trainee_id=attempt.trainee_id,
+        status=attempt.status.value,
+        score=attempt.score,
+        total_marks=attempt.total_marks,
+        started_at=attempt.started_at,
+        submitted_at=attempt.submitted_at,
+        answers=attempt.answers,
+        questions=questions
+    )
+
+
+@router.post("/attempts/{attempt_id}/request-reattempt", response_model=ReAttemptRequestOut)
+def request_reattempt(
+    attempt_id: int, payload: ReAttemptRequestCreate, db: Session = Depends(get_db), trainee: User = Depends(require_trainee)
+):
+    attempt = db.query(AssessmentAttempt).filter(
+        AssessmentAttempt.id == attempt_id, AssessmentAttempt.trainee_id == trainee.id
+    ).first()
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Attempt not found")
+    
+    existing = db.query(ReAttemptRequest).filter(
+        ReAttemptRequest.attempt_id == attempt_id,
+        ReAttemptRequest.status == ReAttemptStatus.requested
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="A re-attempt request is already pending for this attempt")
+    
+    req = ReAttemptRequest(
+        attempt_id=attempt.id,
+        trainee_id=trainee.id,
+        questionnaire_id=attempt.questionnaire_id,
+        reason=payload.reason
+    )
+    db.add(req)
+    db.commit()
+    db.refresh(req)
+    return req
+
+@router.get("/reattempt-requests/pending", response_model=list[ReAttemptRequestOut])
+def pending_reattempt_requests(db: Session = Depends(get_db), trainer: User = Depends(require_trainer)):
+    return db.query(ReAttemptRequest).join(Questionnaire).filter(
+        Questionnaire.trainer_id == trainer.id,
+        ReAttemptRequest.status == ReAttemptStatus.requested
+    ).all()
+
+@router.post("/reattempt-requests/{request_id}/review", response_model=ReAttemptRequestOut)
+def review_reattempt_request(
+    request_id: int, payload: ReAttemptRequestReview, db: Session = Depends(get_db), trainer: User = Depends(require_trainer)
+):
+    req = db.query(ReAttemptRequest).join(Questionnaire).filter(
+        ReAttemptRequest.id == request_id,
+        Questionnaire.trainer_id == trainer.id
+    ).first()
+    
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found or not authorized")
+    if req.status != ReAttemptStatus.requested:
+        raise HTTPException(status_code=400, detail="Request is already reviewed")
+    
+    req.status = ReAttemptStatus.approved if payload.action == "approve" else ReAttemptStatus.rejected
+    req.reviewed_by = trainer.id
+    req.reviewed_at = datetime.now(timezone.utc)
+    
+    if req.status == ReAttemptStatus.approved:
+        # Delete the old attempt so the trainee can start a new one
+        attempt = db.get(AssessmentAttempt, req.attempt_id)
+        if attempt:
+            db.delete(attempt)
+    
+    db.commit()
+    db.refresh(req)
+    return req

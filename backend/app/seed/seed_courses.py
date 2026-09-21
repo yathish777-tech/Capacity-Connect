@@ -1,5 +1,6 @@
 from app.core.database import SessionLocal
 from app.core.security import hash_password
+from app.models.certificate import CertificateTemplate
 from app.models.competency_tag import CompetencyTag
 from app.models.course import Course
 from app.models.course_subject_tag import CourseSubjectTag
@@ -37,12 +38,16 @@ TRAINERS = [
     ("trainer.radar@imd.gov.in", "Ananya Rao", "IMD-TR-101", True, {"Radar Systems": 5, "AWS Sensor Calibration": 3}),
     ("trainer.forecast@imd.gov.in", "Vikram Sinha", "IMD-TR-102", True, {"Cyclone Forecasting": 5, "Monsoon Analysis": 4}),
     ("trainer.satellite@imd.gov.in", "Priya Nair", "IMD-TR-103", False, {"Satellite Meteorology": 4, "Data Quality Control": 3}),
+    ("trainer.pending.radar@imd.gov.in", "Farhan Ali", "IMD-TR-104", False, {"Radar Systems": 4}),
+    ("trainer.pending.aws@imd.gov.in", "Meera Joshi", "IMD-TR-105", False, {"AWS Sensor Calibration": 5}),
 ]
 
 TRAINEES = [
     ("trainee.one@imd.gov.in", "Rahul Verma", "IMD-TE-201", True),
     ("trainee.two@imd.gov.in", "Sneha Iyer", "IMD-TE-202", True),
     ("trainee.three@imd.gov.in", "Arjun Das", "IMD-TE-203", False),
+    ("trainee.pending.one@imd.gov.in", "Nisha Roy", "IMD-TE-204", False),
+    ("trainee.pending.two@imd.gov.in", "Kabir Menon", "IMD-TE-205", False),
 ]
 
 SAMPLE_QUESTIONS = [
@@ -94,6 +99,7 @@ def run() -> None:
 
         db.flush()
         radar_trainer = db.query(User).filter(User.email == "trainer.radar@imd.gov.in").first()
+        seed_admin = db.query(User).filter(User.role == UserRole.admin).first()
 
         first_course = None
         for idx, (title, category, description, tag_names) in enumerate(COURSES):
@@ -137,9 +143,19 @@ def run() -> None:
                         option_c=c,
                         option_d=d,
                         correct_option=correct,
+                        correct_options=correct,
                         marks=1,
                     )
                 )
+            db.add(
+                CertificateTemplate(
+                    course_id=first_course.id,
+                    file_url="seed/placeholders/aws-certificate-template.pdf",
+                    file_type="pdf",
+                    name_position={"x": 120, "y": 320, "font_size": 28},
+                    uploaded_by=seed_admin.id if seed_admin else radar_trainer.id,
+                )
+            )
 
         db.commit()
         print(f"[seed_courses] Seeded {len(COURSES)} courses, {len(TRAINERS)} trainers, {len(TRAINEES)} trainees.")

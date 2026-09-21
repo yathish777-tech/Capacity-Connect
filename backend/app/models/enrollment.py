@@ -20,3 +20,4 @@ class Enrollment(Base):
     completed_at = Column(DateTime, nullable=True)
 
     course = relationship("Course")
+    trainee = relationship("User")

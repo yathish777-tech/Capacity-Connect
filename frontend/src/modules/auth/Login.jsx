@@ -1,13 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext'
 import { apiErrorMessage } from '../../services/api'
 import AuthHero from '../../components/AuthHero'
 
 export default function Login() {
-  const { t } = useTranslation()
   const { login } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ email: '', password: '' })
@@ -31,12 +29,12 @@ export default function Login() {
       <AuthHero />
       <div className="flex items-center justify-center p-8 bg-paper">
         <div className="w-full max-w-sm">
-          <h1 className="font-display text-2xl font-semibold mb-1">{t('auth.login')}</h1>
+          <h1 className="font-display text-2xl font-semibold mb-1">Log in</h1>
           <p className="text-sm text-ink/60 mb-6">Sign in to your CAPACITY CONNECT dashboard.</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="label">{t('auth.email')}</label>
+              <label className="label">Email address</label>
               <input
                 type="email"
                 required
@@ -46,7 +44,7 @@ export default function Login() {
               />
             </div>
             <div>
-              <label className="label">{t('auth.password')}</label>
+              <label className="label">Password</label>
               <input
                 type="password"
                 required
@@ -56,14 +54,14 @@ export default function Login() {
               />
             </div>
             <button type="submit" disabled={submitting} className="btn-primary w-full">
-              {submitting ? 'Signing in…' : t('auth.login')}
+              {submitting ? 'Signing in…' : 'Log in'}
             </button>
           </form>
 
           <p className="text-sm text-ink/60 mt-6">
-            {t('auth.no_account')}{' '}
+            Don't have an account?{' '}
             <Link to="/signup" className="text-teal-600 font-medium hover:underline">
-              {t('auth.signup')}
+              Sign up
             </Link>
           </p>
         </div>

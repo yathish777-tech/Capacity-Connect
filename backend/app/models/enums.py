@@ -50,6 +50,12 @@ class AttemptStatus(str, enum.Enum):
     auto_submitted = "auto_submitted"
 
 
+class ReAttemptStatus(str, enum.Enum):
+    requested = "requested"
+    approved = "approved"
+    rejected = "rejected"
+
+
 class ViolationType(str, enum.Enum):
     tab_switch = "tab_switch"
     window_blur = "window_blur"

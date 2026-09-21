@@ -9,12 +9,10 @@ import Signup from './modules/auth/Signup'
 
 import AdminDashboard, { AdminOverview } from './modules/admin/AdminDashboard'
 import UserManagement from './modules/admin/UserManagement'
-import TraineeApprovals from './modules/admin/TraineeApprovals'
-import TrainerApprovals from './modules/admin/TrainerApprovals'
+import UserApprovals from './modules/admin/UserApprovals'
 import TrainerRequirements from './modules/admin/TrainerRequirements'
 import CompetencyEngine from './modules/admin/CompetencyEngine'
-import CourseManagement from './modules/admin/CourseManagement'
-import CourseMaterials from './modules/admin/CourseMaterials'
+import CourseContentManagement from './modules/admin/CourseContentManagement'
 import AdminCertificates from './modules/admin/Certificates'
 import AdminAnnouncements from './modules/admin/Announcements'
 import ReportsAnalytics from './modules/admin/ReportsAnalytics'
@@ -30,9 +28,10 @@ import TraineeProfile from './modules/trainee/TraineeProfile'
 import CourseEnrollment from './modules/trainee/CourseEnrollment'
 import CourseLearning from './modules/trainee/CourseLearning'
 import Assessment from './modules/trainee/Assessment'
-import CertificateRequest from './modules/trainee/CertificateRequest'
+import MyCertificates from './modules/trainee/MyCertificates'
 import AiDoubtBot from './modules/trainee/AiDoubtBot'
 import Feedback from './modules/trainee/Feedback'
+import TraineeAnnouncements from './modules/trainee/TraineeAnnouncements'
 
 function RootRedirect() {
   const { user, loading } = useAuth()
@@ -61,12 +60,10 @@ export default function App() {
           >
             <Route index element={<AdminOverview />} />
             <Route path="users" element={<UserManagement />} />
-            <Route path="trainee-approvals" element={<TraineeApprovals />} />
-            <Route path="trainer-approvals" element={<TrainerApprovals />} />
+            <Route path="user-approvals" element={<UserApprovals />} />
             <Route path="trainer-requirements" element={<TrainerRequirements />} />
             <Route path="competency-engine" element={<CompetencyEngine />} />
-            <Route path="course-management" element={<CourseManagement />} />
-            <Route path="course-materials" element={<CourseMaterials />} />
+            <Route path="course-content" element={<CourseContentManagement />} />
             <Route path="certificates" element={<AdminCertificates />} />
             <Route path="announcements" element={<AdminAnnouncements />} />
             <Route path="reports" element={<ReportsAnalytics />} />
@@ -96,10 +93,11 @@ export default function App() {
             }
           >
             <Route index element={<TraineeOverview />} />
+            <Route path="announcements" element={<TraineeAnnouncements />} />
             <Route path="profile" element={<TraineeProfile />} />
             <Route path="courses" element={<CourseEnrollment />} />
             <Route path="learning/:courseId" element={<CourseLearning />} />
-            <Route path="certificates" element={<CertificateRequest />} />
+            <Route path="certificates" element={<MyCertificates />} />
             <Route path="doubt-bot" element={<AiDoubtBot />} />
             <Route path="feedback" element={<Feedback />} />
           </Route>

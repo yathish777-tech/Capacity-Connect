@@ -12,20 +12,28 @@ from app.core.config import settings
 
 
 def send_email(to_email: str, subject: str, body: str) -> bool:
+    if settings.mock_email:
+        print(f"[MOCK EMAIL] To: {to_email} | Subject: {subject}")
+        return True
+
     if not settings.smtp_host:
         return False
 
-    message = MIMEText(body)
-    message["Subject"] = subject
-    message["From"] = settings.smtp_from
-    message["To"] = to_email
+    try:
+        message = MIMEText(body)
+        message["Subject"] = subject
+        message["From"] = settings.smtp_from
+        message["To"] = to_email
 
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
-        server.starttls()
-        if settings.smtp_user:
-            server.login(settings.smtp_user, settings.smtp_password)
-        server.sendmail(settings.smtp_from, [to_email], message.as_string())
-    return True
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+            server.starttls()
+            if settings.smtp_user:
+                server.login(settings.smtp_user, settings.smtp_password)
+            server.sendmail(settings.smtp_from, [to_email], message.as_string())
+        return True
+    except Exception as e:
+        print(f"Failed to send email to {to_email}: {e}")
+        return False
 
 
 def notify_account_reviewed(to_email: str, full_name: str, approved: bool) -> None:

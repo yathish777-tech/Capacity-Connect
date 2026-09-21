@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
     authService
       .fetchMe()
       .then((me) => {
-        const refreshed = { id: me.id, email: me.email, role: me.role, status: me.status, full_name: me.profile?.full_name || me.email }
+        const refreshed = { id: me.id, email: me.email, role: me.role, status: me.status, rejection_reason: me.rejection_reason, full_name: me.profile?.full_name || me.email }
         setUser(refreshed)
         localStorage.setItem('cc_user', JSON.stringify(refreshed))
       })
@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     const data = await authService.login(email, password)
-    const nextUser = { id: data.user_id, role: data.role, status: data.status, full_name: data.full_name, email }
+    const nextUser = { id: data.user_id, role: data.role, status: data.status, rejection_reason: data.rejection_reason, full_name: data.full_name, email }
     localStorage.setItem('cc_token', data.access_token)
     localStorage.setItem('cc_user', JSON.stringify(nextUser))
     setUser(nextUser)
@@ -50,8 +50,21 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  async function refreshUser() {
+    try {
+      const me = await authService.fetchMe()
+      const refreshed = { id: me.id, email: me.email, role: me.role, status: me.status, rejection_reason: me.rejection_reason, full_name: me.profile?.full_name || me.email }
+      setUser(refreshed)
+      localStorage.setItem('cc_user', JSON.stringify(refreshed))
+      return refreshed
+    } catch (err) {
+      console.error(err)
+      return null
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, refreshUser }}>{children}</AuthContext.Provider>
   )
 }
 

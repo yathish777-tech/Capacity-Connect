@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, Column, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import BigInteger, Column, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -24,6 +24,7 @@ class CourseMaterial(Base):
     status = Column(Enum(MaterialStatus), default=MaterialStatus.pending, nullable=False)
     approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # admin
     approved_at = Column(DateTime, nullable=True)
+    review_remark = Column(Text, nullable=True)
 
     embedding_indexed = Column(String(20), default="no")  # "no" | "yes" - set once chunks are embedded
     uploaded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

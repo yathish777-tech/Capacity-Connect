@@ -1,8 +1,4 @@
-import { useTranslation } from 'react-i18next'
-
 export default function AuthHero() {
-  const { t } = useTranslation()
-
   return (
     <div className="relative hidden lg:flex flex-col justify-between bg-navy-900 text-white p-10 overflow-hidden">
       <svg className="absolute inset-0 w-full h-full opacity-40" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice">
@@ -15,12 +11,12 @@ export default function AuthHero() {
       </svg>
 
       <div className="relative z-10">
-        <p className="font-display text-2xl font-semibold tracking-tight">{t('app_name')}</p>
+        <p className="font-display text-2xl font-semibold tracking-tight">CAPACITY CONNECT</p>
         <p className="text-white/60 text-sm mt-1">India Meteorological Department</p>
       </div>
 
       <div className="relative z-10 max-w-sm">
-        <p className="font-display text-xl leading-snug">{t('tagline')}</p>
+        <p className="font-display text-xl leading-snug">Empowering the next generation of weather scientists.</p>
         <p className="text-white/50 text-sm mt-4">
           Trainees, trainers and administrators — one portal for competency development, assessments and
           admin-verified knowledge sharing.

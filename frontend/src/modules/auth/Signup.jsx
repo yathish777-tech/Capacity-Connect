@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext'
 import { apiErrorMessage } from '../../services/api'
@@ -20,7 +19,6 @@ const initialForm = {
 }
 
 export default function Signup() {
-  const { t } = useTranslation()
   const { signup, login } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState(initialForm)
@@ -50,12 +48,12 @@ export default function Signup() {
       <AuthHero />
       <div className="flex items-center justify-center p-8 bg-paper">
         <div className="w-full max-w-md">
-          <h1 className="font-display text-2xl font-semibold mb-1">{t('auth.signup')}</h1>
+          <h1 className="font-display text-2xl font-semibold mb-1">Sign up</h1>
           <p className="text-sm text-ink/60 mb-6">Register as a Trainer or Trainee. An Admin reviews every account.</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="label">{t('auth.role')}</label>
+              <label className="label">Role</label>
               <div className="flex gap-2">
                 {['trainee', 'trainer'].map((r) => (
                   <button
@@ -66,7 +64,7 @@ export default function Signup() {
                       form.role === r ? 'border-teal-600 bg-teal-50 text-teal-700' : 'border-line text-ink/60'
                     }`}
                   >
-                    {t(`auth.${r}`)}
+                    {r}
                   </button>
                 ))}
               </div>
@@ -74,15 +72,15 @@ export default function Signup() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <label className="label">{t('auth.full_name')}</label>
+                <label className="label">Full name</label>
                 <input required className="input" value={form.full_name} onChange={update('full_name')} />
               </div>
               <div>
-                <label className="label">{t('auth.email')}</label>
+                <label className="label">Email address</label>
                 <input type="email" required className="input" value={form.email} onChange={update('email')} />
               </div>
               <div>
-                <label className="label">{t('auth.password')}</label>
+                <label className="label">Password</label>
                 <input
                   type="password"
                   required
@@ -93,7 +91,7 @@ export default function Signup() {
                 />
               </div>
               <div>
-                <label className="label">{t('auth.employee_id')}</label>
+                <label className="label">Employee ID</label>
                 <input required className="input" value={form.employee_id} onChange={update('employee_id')} />
               </div>
               <div>
@@ -120,14 +118,14 @@ export default function Signup() {
             </div>
 
             <button type="submit" disabled={submitting} className="btn-primary w-full">
-              {submitting ? 'Creating account…' : t('auth.signup')}
+              {submitting ? 'Creating account…' : 'Sign up'}
             </button>
           </form>
 
           <p className="text-sm text-ink/60 mt-6">
-            {t('auth.have_account')}{' '}
+            Already have an account?{' '}
             <Link to="/login" className="text-teal-600 font-medium hover:underline">
-              {t('auth.login')}
+              Log in
             </Link>
           </p>
         </div>

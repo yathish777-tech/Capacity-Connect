@@ -30,8 +30,9 @@ export default function Assessment() {
     if (endedRef.current || !attempt) return
     endedRef.current = true
     try {
-      const graded = await assessmentService.submitAttempt(attempt.id, answersRef.current)
-      setResult(graded)
+      await assessmentService.submitAttempt(attempt.id, answersRef.current)
+      const review = await assessmentService.getAttemptReview(attempt.id)
+      setResult(review)
     } catch (err) {
       toast.error(apiErrorMessage(err))
     } finally {
@@ -129,6 +130,25 @@ export default function Assessment() {
     setAnswers((a) => ({ ...a, [questionId]: letter }))
   }
 
+  function toggleAnswer(questionId, letter) {
+    setAnswers((current) => {
+      const existing = Array.isArray(current[questionId]) ? current[questionId] : []
+      const next = existing.includes(letter) ? existing.filter((item) => item !== letter) : [...existing, letter]
+      return { ...current, [questionId]: next }
+    })
+  }
+
+  function answerLetters(value) {
+    if (!value) return []
+    return Array.isArray(value) ? value : [value]
+  }
+
+  function answerText(question, value) {
+    const letters = answerLetters(value)
+    if (!letters.length) return 'Skipped'
+    return letters.map((letter) => question[`option_${letter}`]).join(', ')
+  }
+
   async function handleManualSubmit() {
     await finalizeSubmit()
   }
@@ -152,27 +172,79 @@ export default function Assessment() {
   }
 
   if (phase === 'result') {
-    const passed = result && result.total_marks > 0 && result.score / result.total_marks * 100 >= 50
+    const passed = result && result.total_marks > 0 && result.score / result.total_marks * 100 >= (questionnaire?.passing_score_percent || 50)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-paper px-4">
-        <div className="card max-w-md w-full p-8 text-center space-y-3">
-          {passed ? (
-            <CheckCircle2 className="h-10 w-10 mx-auto text-success-600" />
-          ) : (
-            <XCircle className="h-10 w-10 mx-auto text-amber-600" />
+      <div className="min-h-screen py-10 bg-paper px-4">
+        <div className="card max-w-2xl mx-auto w-full p-8 space-y-6">
+          <div className="text-center space-y-3 mb-8">
+            {passed ? (
+              <CheckCircle2 className="h-10 w-10 mx-auto text-success-600" />
+            ) : (
+              <XCircle className="h-10 w-10 mx-auto text-amber-600" />
+            )}
+            <h1 className="font-display text-2xl font-semibold">
+              {passed ? 'Assessment Passed' : 'Assessment Failed'}
+            </h1>
+            {result && (
+              <p className="text-lg font-medium text-ink/80">
+                Score: <span className="font-bold text-ink">{result.score}</span> / {result.total_marks}
+              </p>
+            )}
+            {result?.status === 'auto_submitted' && (
+              <p className="text-sm text-amber-600">This attempt was auto-submitted due to integrity violations.</p>
+            )}
+          </div>
+          
+          {result?.questions && (
+            <div className="space-y-4 mt-6">
+              <h2 className="font-semibold text-lg border-b border-line pb-2 mb-4">Review Answers</h2>
+              {result.questions.map((q, idx) => {
+                const traineeAnswer = result.answers?.[q.id]
+                const correctAnswer = q.correct_options?.length ? q.correct_options : [q.correct_option]
+                const isCorrect = answerLetters(traineeAnswer).sort().join(',') === correctAnswer.slice().sort().join(',')
+                return (
+                  <div key={q.id} className="p-4 rounded border border-line bg-white/50">
+                    <p className="font-medium mb-2">{idx + 1}. {q.question_text}</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="col-span-2 sm:col-span-1">
+                        <span className="text-ink/60">Your Answer: </span>
+                        <span className={isCorrect ? 'text-success-600 font-medium' : 'text-amber-600 font-medium'}>
+                          {answerText(q, traineeAnswer)}
+                        </span>
+                      </div>
+                      {!isCorrect && (
+                        <div className="col-span-2 sm:col-span-1">
+                          <span className="text-ink/60">Correct Answer: </span>
+                          <span className="text-success-600 font-medium">{answerText(q, correctAnswer)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           )}
-          <h1 className="font-display text-xl font-semibold">Assessment submitted</h1>
-          {result && (
-            <p className="text-ink/70">
-              Score: <span className="font-semibold">{result.score}</span> / {result.total_marks}
-            </p>
-          )}
-          {result?.status === 'auto_submitted' && (
-            <p className="text-sm text-amber-600">This attempt was auto-submitted due to integrity violations.</p>
-          )}
-          <button onClick={() => navigate(-1)} className="btn-primary w-full mt-2">
-            Back to course
-          </button>
+
+          <div className="flex gap-4 mt-6">
+            {!passed && result && (
+              <button
+                onClick={() => {
+                  const reason = prompt('Please enter a reason for requesting a re-attempt:')
+                  if (reason) {
+                    assessmentService.requestReattempt(result.id, reason)
+                      .then(() => toast.success('Re-attempt requested. An admin/trainer will review it.'))
+                      .catch((err) => toast.error(apiErrorMessage(err)))
+                  }
+                }}
+                className="btn border border-line flex-1"
+              >
+                Request Re-attempt
+              </button>
+            )}
+            <button onClick={() => navigate(-1)} className="btn-primary flex-1">
+              Back to course
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -213,18 +285,27 @@ export default function Assessment() {
                 <label
                   key={letter}
                   className={`flex items-center gap-2 rounded border px-3 py-2 text-sm cursor-pointer ${
-                    answers[q.id] === letter ? 'border-teal-600 bg-teal-50' : 'border-line'
+                    answerLetters(answers[q.id]).includes(letter) ? 'border-teal-600 bg-teal-50' : 'border-line'
                   }`}
                 >
-                  <input
-                    type="radio"
-                    name={`q-${q.id}`}
-                    checked={answers[q.id] === letter}
-                    onChange={() => selectAnswer(q.id, letter)}
-                  />
+                  {q.is_multi_answer ? (
+                    <input
+                      type="checkbox"
+                      checked={answerLetters(answers[q.id]).includes(letter)}
+                      onChange={() => toggleAnswer(q.id, letter)}
+                    />
+                  ) : (
+                    <input
+                      type="radio"
+                      name={`q-${q.id}`}
+                      checked={answers[q.id] === letter}
+                      onChange={() => selectAnswer(q.id, letter)}
+                    />
+                  )}
                   {q[`option_${letter}`]}
                 </label>
               ))}
+              {q.is_multi_answer && <p className="text-xs text-ink/50">Select all correct options.</p>}
             </div>
           </div>
         ))}

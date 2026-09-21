@@ -10,11 +10,26 @@ from app.models.course import Course
 from app.models.course_material import CourseMaterial
 from app.models.course_request import CourseRequest
 from app.models.enums import AssignmentStatus, CourseStatus, MaterialStatus, MaterialType
+from app.models.material_chunk import MaterialChunk
 from app.models.user import User
 from app.schemas.course import CourseOut, CourseRequestOut, CourseRequestRespond, MaterialOut, MaterialUrlOut
+from app.schemas.enrollment import EnrollmentWithTrainee
+from app.schemas.user import ProfileUpdate, UserOut
 from app.services import storage
 
 router = APIRouter(prefix="/trainer", tags=["trainer"], dependencies=[Depends(require_trainer)])
+
+
+@router.patch("/profile", response_model=UserOut)
+def update_profile(payload: ProfileUpdate, db: Session = Depends(get_db), trainer: User = Depends(require_trainer)):
+    if not trainer.profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    updates = payload.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(trainer.profile, field, value)
+    db.commit()
+    db.refresh(trainer)
+    return trainer
 
 ALLOWED_MIME_TYPES = {
     "application/pdf",
@@ -106,6 +121,12 @@ def _assert_owns_course(db: Session, course_id: int, trainer: User) -> Course:
         raise HTTPException(status_code=403, detail="You are not the assigned trainer for this course")
     return course
 
+@router.get("/courses/{course_id}/trainees", response_model=list[EnrollmentWithTrainee])
+def my_course_trainees(course_id: int, db: Session = Depends(get_db), trainer: User = Depends(require_trainer)):
+    _assert_owns_course(db, course_id, trainer)
+    from app.models.enrollment import Enrollment
+    return db.query(Enrollment).filter(Enrollment.course_id == course_id).all()
+
 
 def _get_owned_material(db: Session, course_id: int, material_id: int, trainer: User) -> CourseMaterial:
     _assert_owns_course(db, course_id, trainer)
@@ -116,6 +137,11 @@ def _get_owned_material(db: Session, course_id: int, material_id: int, trainer: 
     if not material:
         raise HTTPException(status_code=404, detail="Material not found")
     return material
+
+
+def _remove_material_embeddings(db: Session, material: CourseMaterial) -> None:
+    db.query(MaterialChunk).filter(MaterialChunk.material_id == material.id).delete()
+    material.embedding_indexed = "no"
 
 
 @router.get("/courses/{course_id}/materials", response_model=list[MaterialOut])
@@ -229,6 +255,7 @@ async def replace_material(
     material.mime_type = mime_type
     material.storage_path = storage_path
     material.status = MaterialStatus.pending
+    _remove_material_embeddings(db, material)
     material.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(material)
@@ -243,6 +270,7 @@ def delete_material(
     trainer: User = Depends(require_trainer),
 ):
     material = _get_owned_material(db, course_id, material_id, trainer)
+    _remove_material_embeddings(db, material)
     try:
         storage.delete_file(material.storage_path)
     except RuntimeError as exc:

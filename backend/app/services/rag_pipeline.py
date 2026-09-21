@@ -71,6 +71,10 @@ def ingest_material(db: Session, material: CourseMaterial, file_bytes: bytes) ->
     return len(pieces)
 
 
+import math
+from sqlalchemy import text, tuple_
+from collections import defaultdict
+
 def answer_doubt(db: Session, course_id: int, question: str, top_k: int = 5) -> dict:
     question_vector = _embed([question])[0]
 
@@ -79,22 +83,58 @@ def answer_doubt(db: Session, course_id: int, question: str, top_k: int = 5) -> 
         CourseMaterial.status == MaterialStatus.approved,
     )
 
-    matches = (
-        db.query(MaterialChunk)
+    # 1. Vector Search (Top 50)
+    vector_matches = (
+        db.query(MaterialChunk.id)
         .filter(MaterialChunk.course_id == course_id, MaterialChunk.material_id.in_(approved_material_ids))
         .order_by(MaterialChunk.embedding.cosine_distance(question_vector))
-        .limit(top_k)
+        .limit(50)
+        .all()
+    )
+    
+    # 2. Keyword Search (BM25-like using PostgreSQL text search) (Top 50)
+    keyword_matches = (
+        db.query(MaterialChunk.id)
+        .filter(
+            MaterialChunk.course_id == course_id,
+            MaterialChunk.material_id.in_(approved_material_ids),
+            text("to_tsvector('english', chunk_text) @@ plainto_tsquery('english', :q)").bindparams(q=question)
+        )
+        .order_by(text("ts_rank(to_tsvector('english', chunk_text), plainto_tsquery('english', :q)) DESC").bindparams(q=question))
+        .limit(50)
         .all()
     )
 
-    if not matches:
+    # 3. Reciprocal Rank Fusion (RRF)
+    # RRF score = 1 / (k + rank) where k is typically 60
+    rrf_k = 60
+    scores = defaultdict(float)
+
+    for rank, (chunk_id,) in enumerate(vector_matches):
+        scores[chunk_id] += 1.0 / (rrf_k + rank + 1)
+        
+    for rank, (chunk_id,) in enumerate(keyword_matches):
+        scores[chunk_id] += 1.0 / (rrf_k + rank + 1)
+        
+    # Get top K chunk IDs sorted by RRF score
+    sorted_chunk_ids = sorted(scores.keys(), key=lambda x: scores[x], reverse=True)[:top_k]
+
+    if not sorted_chunk_ids:
         return {
             "answer": (
-                "There's no approved course material indexed for this course yet, so I can't "
-                "answer from verified content. Please check with your trainer or Admin."
+                "There's no approved course material indexed for this course yet, or no relevant information was found. Please check with your trainer or Admin."
             ),
             "sources": [],
         }
+
+    # Fetch the actual chunk objects
+    matches = (
+        db.query(MaterialChunk)
+        .filter(MaterialChunk.id.in_(sorted_chunk_ids))
+        .all()
+    )
+    # Sort them by their RRF score rank
+    matches.sort(key=lambda x: sorted_chunk_ids.index(x.id))
 
     context_block = "\n\n---\n\n".join(m.chunk_text for m in matches)
     prompt_messages = [

@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import require_trainee
-from app.models.certificate import Certificate
+from app.models.certificate import Certificate, CertificateRequest, CertificateTemplate
 from app.models.enrollment import Enrollment
-from app.models.enums import EnrollmentStatus
+from app.models.enums import CertificateStatus, EnrollmentStatus
 from app.models.user import User
 from app.schemas.certificate import CertificateOut, CertificateRequestIn
 
@@ -24,13 +24,24 @@ def request_certificate(
     if not enrollment:
         raise HTTPException(status_code=400, detail="Complete the course (pass its assessment) before requesting a certificate")
 
-    existing = db.query(Certificate).filter(
-        Certificate.course_id == payload.course_id, Certificate.trainee_id == trainee.id
+    if not db.query(CertificateTemplate).filter(CertificateTemplate.course_id == payload.course_id).first():
+        raise HTTPException(status_code=400, detail="This course does not have a certificate template yet")
+
+    existing_new = db.query(CertificateRequest).filter(
+        CertificateRequest.course_id == payload.course_id,
+        CertificateRequest.trainee_id == trainee.id,
     ).first()
-    if existing:
+    if existing_new and existing_new.status != CertificateStatus.rejected:
         raise HTTPException(status_code=400, detail="You already have a certificate request for this course")
 
     certificate = Certificate(trainee_id=trainee.id, course_id=payload.course_id)
+    if existing_new:
+        existing_new.status = CertificateStatus.requested
+        existing_new.remark = None
+        existing_new.reviewed_by = None
+        existing_new.reviewed_at = None
+    else:
+        db.add(CertificateRequest(trainee_id=trainee.id, course_id=payload.course_id))
     db.add(certificate)
     db.commit()
     db.refresh(certificate)

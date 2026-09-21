@@ -26,3 +26,18 @@ class Course(Base):
 
     subject_tags = relationship("CourseSubjectTag", back_populates="course", cascade="all, delete-orphan")
     materials = relationship("CourseMaterial", back_populates="course", cascade="all, delete-orphan")
+
+    @property
+    def subject_tag_names(self) -> list[str]:
+        return [link.tag.name for link in self.subject_tags if link.tag]
+
+    @property
+    def assigned_trainer_name(self) -> str | None:
+        return self.assigned_trainer.profile.full_name if getattr(self, "assigned_trainer", None) and self.assigned_trainer.profile else None
+
+    assigned_trainer = relationship("User", foreign_keys=[assigned_trainer_id])
+    certificate_template = relationship("CertificateTemplate", uselist=False)
+
+    @property
+    def has_certificate_template(self) -> bool:
+        return self.certificate_template is not None

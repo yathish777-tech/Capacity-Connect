@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
 from app.schemas.course import CourseOut
-
+from app.schemas.user import UserOut
 
 class EnrollmentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -20,3 +20,7 @@ class EnrollmentOut(BaseModel):
 
 class EnrollmentWithCourse(EnrollmentOut):
     course: CourseOut
+
+
+class EnrollmentWithTrainee(EnrollmentOut):
+    trainee: UserOut

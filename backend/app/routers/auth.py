@@ -59,6 +59,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         role=user.role.value,
         status=user.status.value,
         full_name=full_name,
+        rejection_reason=user.rejection_reason,
     )
 
 

@@ -17,3 +17,7 @@ export const logViolation = (attemptId, violationType) =>
 export const submitAttempt = (attemptId, answers) =>
   api.post(`/assessments/attempts/${attemptId}/submit`, { answers }).then((r) => r.data)
 export const getAttempt = (attemptId) => api.get(`/assessments/attempts/${attemptId}`).then((r) => r.data)
+export const getAttemptReview = (attemptId) => api.get(`/assessments/attempts/${attemptId}/review`).then((r) => r.data)
+export const requestReattempt = (attemptId, reason) => api.post(`/assessments/attempts/${attemptId}/request-reattempt`, { reason }).then((r) => r.data)
+export const getPendingReattempts = () => api.get('/assessments/reattempt-requests/pending').then((r) => r.data)
+export const reviewReattempt = (requestId, action) => api.post(`/assessments/reattempt-requests/${requestId}/review`, { action }).then((r) => r.data)

@@ -20,14 +20,17 @@ def ensure_database_schema() -> None:
 
 
 def ensure_course_material_metadata_columns() -> None:
-    """Add material metadata columns for databases created before viewer support."""
+    """Add columns for databases created before newer review/viewer support."""
     schema_prefix = f'"{settings.database_schema}".' if settings.database_schema != "public" else ""
     with engine.begin() as connection:
+        connection.execute(text(f'ALTER TABLE {schema_prefix}users ADD COLUMN IF NOT EXISTS rejection_reason TEXT'))
         connection.execute(text(f'ALTER TABLE {schema_prefix}course_materials ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)'))
         connection.execute(text(f'ALTER TABLE {schema_prefix}course_materials ADD COLUMN IF NOT EXISTS file_size BIGINT'))
         connection.execute(text(f'ALTER TABLE {schema_prefix}course_materials ADD COLUMN IF NOT EXISTS mime_type VARCHAR(150)'))
         connection.execute(text(f'ALTER TABLE {schema_prefix}course_materials ADD COLUMN IF NOT EXISTS created_at TIMESTAMP'))
         connection.execute(text(f'ALTER TABLE {schema_prefix}course_materials ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP'))
+        connection.execute(text(f'ALTER TABLE {schema_prefix}course_materials ADD COLUMN IF NOT EXISTS review_remark TEXT'))
+        connection.execute(text(f'ALTER TABLE {schema_prefix}questions ADD COLUMN IF NOT EXISTS correct_options TEXT'))
         connection.execute(
             text(
                 f"""

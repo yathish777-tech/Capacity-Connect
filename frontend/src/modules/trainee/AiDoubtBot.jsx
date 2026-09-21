@@ -41,7 +41,10 @@ export default function AiDoubtBot() {
 
   return (
     <div className="space-y-4">
-      <h1 className="font-display text-xl font-semibold">AI Doubt Bot</h1>
+      <div className="flex items-center gap-2">
+        <MessageCircleQuestion className="h-6 w-6 text-teal-600" />
+        <h1 className="font-display text-xl font-semibold">RAG Doubtbot</h1>
+      </div>
       <p className="text-sm text-ink/60 max-w-2xl">
         Answers are generated only from course material your Admin has approved — if it's not in the approved
         material, the bot will say so instead of guessing.

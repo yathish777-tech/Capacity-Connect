@@ -16,6 +16,7 @@ const blankQuestion = () => ({
   option_c: '',
   option_d: '',
   correct_option: 'a',
+  correct_options: ['a'],
   marks: 1,
 })
 
@@ -49,6 +50,18 @@ export default function QuestionBank() {
     setQuestions((qs) => qs.map((q, i) => (i === index ? { ...q, [field]: value } : q)))
   }
 
+  function toggleCorrectOption(index, letter) {
+    setQuestions((qs) =>
+      qs.map((q, i) => {
+        if (i !== index) return q
+        const current = q.correct_options || [q.correct_option || 'a']
+        const next = current.includes(letter) ? current.filter((item) => item !== letter) : [...current, letter]
+        const safeNext = next.length ? next : [letter]
+        return { ...q, correct_options: safeNext, correct_option: safeNext[0] }
+      })
+    )
+  }
+
   function resetForm() {
     setTitle('')
     setDeadline('')
@@ -61,13 +74,18 @@ export default function QuestionBank() {
     e.preventDefault()
     setSaving(true)
     try {
+      const normalizedQuestions = questions.map((q) => ({
+        ...q,
+        correct_options: q.correct_options?.length ? q.correct_options : [q.correct_option],
+        correct_option: (q.correct_options?.length ? q.correct_options[0] : q.correct_option) || 'a',
+      }))
       await assessmentService.createQuestionnaire({
         course_id: Number(courseId),
         title,
         deadline: deadline ? new Date(deadline).toISOString() : null,
         duration_minutes: Number(duration),
         passing_score_percent: Number(passingScore),
-        questions,
+        questions: normalizedQuestions,
       })
       toast.success('Assessment created')
       setModalOpen(false)
@@ -174,10 +192,9 @@ export default function QuestionBank() {
                   {['a', 'b', 'c', 'd'].map((letter) => (
                     <div key={letter} className="flex items-center gap-2">
                       <input
-                        type="radio"
-                        name={`correct-${i}`}
-                        checked={q.correct_option === letter}
-                        onChange={() => updateQuestion(i, 'correct_option', letter)}
+                        type="checkbox"
+                        checked={(q.correct_options || [q.correct_option]).includes(letter)}
+                        onChange={() => toggleCorrectOption(i, letter)}
                       />
                       <input
                         required
@@ -189,7 +206,7 @@ export default function QuestionBank() {
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-ink/40">Select the radio button next to the correct option.</p>
+                <p className="text-xs text-ink/40">Tick one or more correct options. The trainee must select all correct options to get marks.</p>
               </div>
             ))}
           </div>

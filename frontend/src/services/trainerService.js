@@ -5,6 +5,9 @@ export const respondToCourseRequest = (requestId, accept) =>
   api.post(`/trainer/course-requests/${requestId}/respond`, { accept }).then((r) => r.data)
 
 export const getMyCourses = () => api.get('/trainer/courses').then((r) => r.data)
+export const getCourseTrainees = (courseId) => api.get(`/trainer/courses/${courseId}/trainees`).then((r) => r.data)
+
+export const updateProfile = (payload) => api.patch('/trainer/profile', payload).then((r) => r.data)
 
 export const getMyCourseMaterials = (courseId) =>
   api.get(`/trainer/courses/${courseId}/materials`).then((r) => r.data)
