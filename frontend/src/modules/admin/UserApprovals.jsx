@@ -31,17 +31,22 @@ export default function UserApprovals() {
 
   function refresh() {
     setUsers(null)
-    adminService.getUserApprovals({ role, status, q }).then(setUsers).catch((err) => toast.error(apiErrorMessage(err)))
+    adminService.getUserApprovals({ role, status: 'all', q }).then(setUsers).catch((err) => toast.error(apiErrorMessage(err)))
   }
 
-  useEffect(refresh, [role, status])
+  useEffect(refresh, [role])
 
   useEffect(() => {
     const id = setTimeout(refresh, 300)
     return () => clearTimeout(id)
   }, [q])
 
-  const visibleIds = useMemo(() => (users || []).map((u) => u.id), [users])
+  useEffect(() => {
+    setSelected(new Set())
+  }, [role, status])
+
+  const filteredUsers = useMemo(() => (users || []).filter((u) => u.status === status), [users, status])
+  const visibleIds = useMemo(() => filteredUsers.map((u) => u.id), [filteredUsers])
   const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id))
 
   function toggleAll() {
@@ -96,6 +101,33 @@ export default function UserApprovals() {
     }
   }
 
+  function actionButtons(user) {
+    if (user.status === 'pending') {
+      return (
+        <>
+          <button disabled={busy} onClick={() => review(user.id, 'approve')} className="btn-primary text-xs px-2.5 py-1">
+            <Check className="h-3.5 w-3.5" /> {t('common.approve')}
+          </button>
+          <button disabled={busy} onClick={() => review(user.id, 'reject')} className="btn-secondary text-xs px-2.5 py-1">
+            <X className="h-3.5 w-3.5" /> {t('common.reject')}
+          </button>
+        </>
+      )
+    }
+    if (user.status === 'approved') {
+      return (
+        <button disabled={busy} onClick={() => review(user.id, 'reject')} className="btn-secondary text-xs px-2.5 py-1">
+          <X className="h-3.5 w-3.5" /> Revoke
+        </button>
+      )
+    }
+    return (
+      <button disabled={busy} onClick={() => review(user.id, 'approve')} className="btn-primary text-xs px-2.5 py-1">
+        <Check className="h-3.5 w-3.5" /> {t('common.approve')}
+      </button>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -119,11 +151,17 @@ export default function UserApprovals() {
               </button>
             ))}
           </div>
-          <select className="input w-44" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <div className="inline-flex rounded border border-line overflow-hidden">
             {statuses.map(([value, label]) => (
-              <option key={value} value={value}>{t(label)}</option>
+              <button
+                key={value}
+                onClick={() => setStatus(value)}
+                className={`px-3 py-2 text-sm ${status === value ? 'bg-teal-600 text-white' : 'bg-white hover:bg-ink/5'}`}
+              >
+                {t(label)}
+              </button>
             ))}
-          </select>
+          </div>
           <div className="relative min-w-[260px] flex-1">
             <Search className="h-4 w-4 absolute left-3 top-3 text-ink/40" />
             <input className="input pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('admin.userApprovals.search')} />
@@ -134,7 +172,7 @@ export default function UserApprovals() {
       <Card>
         {users === null ? (
           <Loader label="Loading approvals..." />
-        ) : users.length === 0 ? (
+        ) : filteredUsers.length === 0 ? (
           <EmptyState icon={UserCheck} title={t('admin.userApprovals.empty')} />
         ) : (
           <div className="overflow-x-auto">
@@ -152,7 +190,7 @@ export default function UserApprovals() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => (
+                {filteredUsers.map((u) => (
                   <tr key={u.id} className="border-b border-line last:border-0 align-top">
                     <td className="py-3 pr-3"><input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleOne(u.id)} /></td>
                     <td className="py-3 pr-4"><span className="rounded bg-ink/10 px-2 py-1 text-xs capitalize">{u.role}</span></td>
@@ -170,12 +208,7 @@ export default function UserApprovals() {
                     <td className="py-3 pr-4"><StatusBadge status={u.status} /></td>
                     <td className="py-3 pr-4">
                       <div className="flex justify-end gap-2">
-                        <button disabled={busy} onClick={() => review(u.id, 'approve')} className="btn-primary text-xs px-2.5 py-1">
-                          <Check className="h-3.5 w-3.5" /> {t('common.approve')}
-                        </button>
-                        <button disabled={busy} onClick={() => review(u.id, 'reject')} className="btn-secondary text-xs px-2.5 py-1">
-                          <X className="h-3.5 w-3.5" /> {t('common.reject')}
-                        </button>
+                        {actionButtons(u)}
                       </div>
                     </td>
                   </tr>

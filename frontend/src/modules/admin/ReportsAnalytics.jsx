@@ -5,6 +5,10 @@ import Card from '../../components/Card'
 import Loader from '../../components/Loader'
 import * as adminService from '../../services/adminService'
 
+function shortCourseName(name = '') {
+  return name.length > 22 ? `${name.slice(0, 22)}…` : name
+}
+
 export default function ReportsAnalytics() {
   const [stats, setStats] = useState(null)
 
@@ -18,6 +22,7 @@ export default function ReportsAnalytics() {
     ...c,
     completion_rate: c.enrollments > 0 ? Math.round((c.completions / c.enrollments) * 100) : 0,
   }))
+  const completionChartHeight = Math.max(220, rows.length * 42)
 
   return (
     <div className="space-y-6">
@@ -29,13 +34,19 @@ export default function ReportsAnalytics() {
       </div>
 
       <Card title="Completion rate by course">
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={rows}>
+        <ResponsiveContainer width="100%" height={completionChartHeight}>
+          <BarChart data={rows} layout="vertical" margin={{ left: 8, right: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E2E5EA" />
-            <XAxis dataKey="course" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={60} />
-            <YAxis unit="%" domain={[0, 100]} />
+            <XAxis type="number" unit="%" domain={[0, 100]} />
+            <YAxis
+              type="category"
+              dataKey="course"
+              width={170}
+              tick={{ fontSize: 12 }}
+              tickFormatter={shortCourseName}
+            />
             <Tooltip formatter={(v) => `${v}%`} />
-            <Bar dataKey="completion_rate" fill="#1B6E76" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="completion_rate" fill="#1B6E76" radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </Card>

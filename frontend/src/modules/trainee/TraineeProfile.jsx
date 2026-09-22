@@ -17,6 +17,24 @@ function Field({ label, value }) {
   )
 }
 
+function EditInput({ label, field, value, onChange }) {
+  return (
+    <div>
+      <label className="label">{label}</label>
+      <input className="input" value={value || ''} onChange={(e) => onChange(field, e.target.value)} />
+    </div>
+  )
+}
+
+function EditTextarea({ label, field, value, onChange }) {
+  return (
+    <div className="md:col-span-2">
+      <label className="label">{label}</label>
+      <textarea className="input min-h-24" value={value || ''} onChange={(e) => onChange(field, e.target.value)} />
+    </div>
+  )
+}
+
 export default function TraineeProfile() {
   const [me, setMe] = useState(null)
   const [form, setForm] = useState({})
@@ -64,20 +82,6 @@ export default function TraineeProfile() {
     }
   }
 
-  const Input = ({ label, field }) => (
-    <div>
-      <label className="label">{label}</label>
-      <input className="input" value={form[field] || ''} onChange={(e) => update(field, e.target.value)} />
-    </div>
-  )
-
-  const Textarea = ({ label, field }) => (
-    <div className="md:col-span-2">
-      <label className="label">{label}</label>
-      <textarea className="input min-h-24" value={form[field] || ''} onChange={(e) => update(field, e.target.value)} />
-    </div>
-  )
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -102,12 +106,12 @@ export default function TraineeProfile() {
 
         {editing ? (
           <form onSubmit={saveProfile} className="grid md:grid-cols-2 gap-4">
-            <Input label="Full name" field="full_name" />
-            <Input label="Current role" field="current_role_title" />
-            <Input label="Phone" field="phone" />
-            <Input label="Skills" field="skills" />
-            <Textarea label="Qualifications" field="qualifications" />
-            <Textarea label="Work experience" field="work_experience" />
+            <EditInput label="Full name" field="full_name" value={form.full_name} onChange={update} />
+            <EditInput label="Current role" field="current_role_title" value={form.current_role_title} onChange={update} />
+            <EditInput label="Phone" field="phone" value={form.phone} onChange={update} />
+            <EditInput label="Skills" field="skills" value={form.skills} onChange={update} />
+            <EditTextarea label="Qualifications" field="qualifications" value={form.qualifications} onChange={update} />
+            <EditTextarea label="Work experience" field="work_experience" value={form.work_experience} onChange={update} />
             <div className="md:col-span-2 flex gap-2">
               <button disabled={saving} className="btn-primary text-sm">
                 <Check className="h-4 w-4" /> Save

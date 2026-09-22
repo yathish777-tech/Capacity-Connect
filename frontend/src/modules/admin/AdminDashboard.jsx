@@ -32,6 +32,10 @@ export const NAV_ITEMS = [
 
 const PIE_COLORS = ['#1B6E76', '#C7621B', '#2F7D4F']
 
+function shortCourseName(name = '') {
+  return name.length > 22 ? `${name.slice(0, 22)}…` : name
+}
+
 function StatCard({ label, value }) {
   return (
     <div className="card p-4">
@@ -49,6 +53,8 @@ export function AdminOverview() {
   }, [])
 
   if (!stats) return <Loader label="Loading overview…" />
+
+  const enrollmentChartHeight = Math.max(220, stats.enrollments_by_course.length * 42)
 
   return (
     <div className="space-y-6">
@@ -83,14 +89,20 @@ export function AdminOverview() {
         </Card>
 
         <Card title="Enrollments by course">
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={stats.enrollments_by_course}>
-              <XAxis dataKey="course" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={60} />
-              <YAxis allowDecimals={false} />
+          <ResponsiveContainer width="100%" height={enrollmentChartHeight}>
+            <BarChart data={stats.enrollments_by_course} layout="vertical" margin={{ left: 8, right: 20 }}>
+              <XAxis type="number" allowDecimals={false} />
+              <YAxis
+                type="category"
+                dataKey="course"
+                width={170}
+                tick={{ fontSize: 12 }}
+                tickFormatter={shortCourseName}
+              />
               <Tooltip />
               <Legend />
-              <Bar dataKey="enrollments" fill="#227F88" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="completions" fill="#2F7D4F" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="enrollments" fill="#227F88" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="completions" fill="#2F7D4F" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
