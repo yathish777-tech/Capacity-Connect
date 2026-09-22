@@ -1,0 +1,59 @@
+# Render Blueprint for this repo.
+# This project does not use Docker or MongoDB.
+# It runs as:
+# - backend: FastAPI + PostgreSQL
+# - frontend: Vite static build
+
+services:
+  - type: web
+    name: capacity-connect-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: capacity-connect-db
+          property: connectionString
+      - key: DATABASE_SCHEMA
+        value: capacity_connect_app
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: FRONTEND_ORIGINS
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: capacity-connect-files
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+
+  - type: web
+    name: capacity-connect-web
+    runtime: static
+    rootDir: frontend
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+
+databases:
+  - name: capacity-connect-db
+    databaseName: capacity_connect
+    user: capacity_connect
+    plan: free
